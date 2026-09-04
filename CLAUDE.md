@@ -2,218 +2,101 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Entry summary
+
+`@defindex/sdk` v0.3.0 (`package.json:2-3`) is the official TypeScript client for the DeFindex vault API on Stellar/Soroban. Published to npm, MIT, server-side focused.
+**Exposes:** the `DefindexSDK` class (default and named export), `HttpClient`, and every request/response type (`src/index.ts:2-12`). One method per API route: factory create-vault (3 variants), vault info/balance/APY/report, deposit/withdraw/withdraw-shares, rebalance, emergency rescue, pause/unpause strategy, get/set role, lock/release/distribute fees, WASM upgrade, `sendTransaction`. Full route table: `docs/modules/sdk-client.md`.
+**Consumes:** the DeFindex API at `https://api.defindex.io` (default base URL, `src/defindex-sdk.ts:82`), authenticated with an API key sent as a Bearer token (`src/clients/http-client.ts:21`). Networks are `testnet` / `mainnet` (`src/types/network.types.ts:2`).
+**No contract addresses are hardcoded** - the API resolves factory, vault and strategy contracts. Nothing in `src/` holds one.
+**Signing is out of scope:** transaction methods return unsigned XDR; the caller signs (e.g. with `@stellar/stellar-sdk`, not a dependency of this package) and submits via `sendTransaction()`.
+
 ## Project Overview
 
-This is the official TypeScript SDK for DeFindex - a decentralized vault management system built on Stellar using Soroban smart contracts. The SDK provides server-side access to vault operations, factory deployments, authentication, and transaction management for the DeFindex ecosystem.
+A thin API client. There is no local business logic, no Stellar RPC access, and no key handling: `DefindexSDK` resolves a network, delegates to `HttpClient`, and returns the API payload. Only runtime dependency is `axios` (`package.json:67`).
 
 ## Development Commands
 
-### Build and Development
-- `pnpm run build` - Compile TypeScript to JavaScript in dist/
-- `pnpm run build:watch` - Watch mode compilation
-- `pnpm run clean` - Remove dist/ directory
+All from `package.json:15-29`.
 
-### Testing
-- `pnpm test` or `pnpm run test:unit` - Run unit tests with mocked dependencies
-- `pnpm run test:integration` - Run integration tests against real API (requires credentials)
-- `pnpm run test:all` - Run both unit and integration tests
-- `pnpm run test:watch` - Watch mode for unit tests
-- `pnpm run test:coverage` - Generate coverage report
-
-### Code Quality
-- `pnpm run lint` - Run ESLint on TypeScript files
-- `pnpm run lint:fix` - Fix ESLint issues automatically
-
-### Publishing
-- `pnpm run prepare` - Builds before publishing
-- `pnpm run prepublishOnly` - Runs tests and linting before publishing
+- `pnpm run build` / `pnpm run build:watch` - compile TypeScript to `dist/`
+- `pnpm test` or `pnpm run test:unit` - unit tests (mocked)
+- `pnpm run test:integration` - integration tests against the real API (needs credentials)
+- `pnpm run test:all` - unit then integration
+- `pnpm run test:watch`, `pnpm run test:coverage`
+- `pnpm run lint`, `pnpm run lint:fix`
+- `pnpm run prepare` (build before publish), `pnpm run prepublishOnly` (test + lint)
+- `pnpm run example` - run `examples/basic-example.ts` with dotenv loaded
 
 ## Architecture
 
-### Core Components
-- **DefindexSDK** (`src/defindex-sdk.ts`) - Main SDK class that orchestrates all operations
-- **HttpClient** (`src/clients/http-client.ts`) - Centralized HTTP client with Bearer token authentication
+Three modules. **Read the module doc before editing its source** - see `docs/modules/README.md`.
 
-### API Operations
-The SDK provides methods organized into the following categories:
+| Module | Source | Doc |
+|---|---|---|
+| SDK client | `src/defindex-sdk.ts`, `src/index.ts` | `docs/modules/sdk-client.md` |
+| HTTP client | `src/clients/http-client.ts` | `docs/modules/http-client.md` |
+| Types | `src/types/` | `docs/modules/types.md` |
 
-**System Operations:**
-- `healthCheck()` - API health monitoring
+Supporting: `tests/` (unit, mocked), `tests/integration/` (live API), `examples/basic-example.ts`, `EXAMPLES.md`, `LLMS-MIGRATION.md` (0.2.1 breaking-change guide), `defindex-sdk-skill.md` (consumer-facing integration skill).
 
-**Factory Operations:**
-- `getFactoryAddress()` - Get factory contract address
-- `createVault()` - Create a new vault
-- `createVaultWithDeposit()` - Create vault with initial deposit
+## Cross-repo dependencies
 
-**Vault Operations:**
-- `getVaultInfo()` - Get comprehensive vault information
-- `getVaultBalance()` - Get user's vault balance and shares
-- `getReport()` - Get vault report with transaction details
-- `depositToVault()` - Deposit assets into vault
-- `withdrawFromVault()` - Withdraw specific amounts
-- `withdrawShares()` - Withdraw by shares
-- `getVaultAPY()` - Get vault APY
+| Direction | Target | What | Evidence |
+|---|---|---|---|
+| this repo -> DeFindex API service | `https://api.defindex.io` | Every SDK method is an HTTP call to this service. Default base URL, overridable via config. | `src/defindex-sdk.ts:82`, `.env.example:17`, `tests/integration/README.md:32-33` |
+| other repos -> this repo | npm `@defindex/sdk` v0.3.0 | Published package. Consumers `import DefindexSDK, { SupportedNetworks } from '@defindex/sdk'`. | `package.json:2-3`, `defindex-sdk-skill.md:26,32` |
+| this repo -> Soroswap | `soroswapRouter?: string` on `CreateVaultParams` | Optional Soroswap router address forwarded to the create-vault endpoint; the vault uses it for rebalance swaps (`SwapExactIn` / `SwapExactOut`). | `src/types/vault.types.ts:159`, `src/types/vault.types.ts:108-115` |
+| this repo -> Stellar/Soroban contracts | factory, vault, strategy contracts | Never hardcoded. Factory address is fetched at runtime; vault addresses are caller-supplied. Testnet fixture addresses appear only in the example and integration tests. | `src/defindex-sdk.ts:155`, `examples/basic-example.ts:41-43`, `tests/integration/defindex-sdk.integration.test.ts:144` |
+| this repo -> GitHub | `defindex-io/defindex-sdk` | Repository / issues home. | `package.json:43-49` |
 
-**Vault Management (Admin):**
-- `rebalanceVault()` - Rebalance vault strategies (Rebalance Manager)
-- `emergencyRescue()` - Emergency asset rescue (Emergency Manager)
-- `pauseStrategy()` - Pause a strategy (Manager)
-- `unpauseStrategy()` - Unpause a strategy (Manager)
-
-**Role Operations:**
-- `getVaultRole()` - Get address for a specific role
-- `setVaultRole()` - Assign new address to a role (Manager)
-
-**Fee Management:**
-- `lockVaultFees()` - Lock fees and optionally update fee rate (Manager)
-- `releaseVaultFees()` - Release fees from a strategy (Manager)
-- `distributeVaultFees()` - Distribute accumulated fees (Manager)
-
-**Contract Management:**
-- `upgradeVaultWasm()` - Upgrade vault WASM contract (Manager)
-
-**Transaction Operations:**
-- `sendTransaction()` - Submit signed transactions (supports LaunchTube)
-
-### Authentication Flow
-1. SDK initializes with API key for automatic authentication
-2. API key provides persistent authentication with Bearer tokens
-3. All authenticated requests use API key authorization
-4. Role-based access control for administrative operations
-
-### Type System
-Comprehensive TypeScript types are defined in `src/types/`:
-- `base.types.ts` - Core enums (SupportedNetworks) and BaseVaultTransactionResponse
-- `factory.types.ts` - Vault factory configuration and response types
-- `vault.types.ts` - Vault operations, roles (VaultRoles enum), fees, instructions, and management types
-- `stellar.types.ts` - Transaction and blockchain interaction types
-- `network.types.ts` - Network configuration types
-- `index.ts` - Main type exports
-
-## Testing Strategy
-
-### Unit Tests
-- Located in `tests/` directory
-- Mock all external dependencies using Jest
-- Focus on SDK logic and type safety
-- Configuration in `jest.config.js`
-- Excludes integration tests via `testPathIgnorePatterns`
-
-### Integration Tests
-- Located in `tests/integration/` directory
-- Test against real DeFindex API
-- Require environment variables for authentication
-- Configuration in `jest.integration.config.js`
-- Extended timeout (30s) for network operations
-- May be flaky due to network/API dependencies
+No `@soroswap/*` or `@defindex/*` npm dependency (`package.json:66-68` lists `axios` only), no database, no message broker. `@stellar/stellar-sdk` is a documented companion for signing but is not declared as a dependency or peer dependency.
 
 ## Environment Configuration
 
-### Required Environment Variables for Integration Tests
-```bash
-# Authentication credentials for DeFindex API
-export DEFINDEX_API_KEY="sk_your_api_key_here"
-```
+Nothing in `src/` reads `process.env`. Env vars are for consumers, the example, and integration tests:
 
-### SDK Configuration
-The SDK accepts a `DefindexSDKConfig` object including:
-- `apiKey` - API key for authentication (required for most operations)
-- `baseUrl` - Custom API base URL (optional, defaults to 'https://api.defindex.io')
-- `timeout` - Request timeout in milliseconds (default 30000)
+- `DEFINDEX_API_KEY` - API key, sent as `Authorization: Bearer <key>` (`.env.example:10`, `src/clients/http-client.ts:21`)
+- `DEFINDEX_API_URL` - optional base URL override (`.env.example:17`, `examples/basic-example.ts:32`)
 
-## Build Configuration
+`DefindexSDKConfig` (`src/defindex-sdk.ts:34-42`): `apiKey?`, `baseUrl?` (default `https://api.defindex.io`), `timeout?` (default `30000`), `defaultNetwork?`.
 
-### TypeScript
-- Target: ES2020
-- CommonJS modules
-- Strict mode enabled
-- Generates declaration files and source maps
-- Output to `dist/` directory
-
-### Package Structure
-- Entry point: `dist/index.js`
-- Types: `dist/index.d.ts`
-- Published files: `dist/`, `README.md`, `LICENSE`
+**Known inconsistency:** `tests/integration/setup.ts:14` lists `DEFINDEX_BASE_URL` in `requiredEnvVars`, a name used nowhere else; the computed `missingVars` on the next line is never read. Only `DEFINDEX_API_KEY` actually gates the integration tests (`tests/integration/setup.ts:18-20`).
 
 ## Key Implementation Notes
 
-### Authentication
-- API key authentication with Bearer tokens
-- Server-side focused - credentials should not be exposed to frontend
-- API key provides persistent authentication without token refresh
-- Configured via SDK constructor parameters
+- **Unsigned XDR everywhere.** Transaction-building methods return an XDR for external signing. `xdr` is `null` for smart-wallet callers (C-addresses) - use `operationXDR` instead (`src/types/base.types.ts:2-7`, `CHANGELOG.md:57-61`).
+- **LaunchTube was removed in 0.2.1** (`CHANGELOG.md:67-74`). `sendTransaction` takes only `(xdr, network?)` (`src/defindex-sdk.ts:714`). Do not reintroduce it.
+- **Network resolution.** Every method calls `getNetwork()` (`src/defindex-sdk.ts:94`), which throws locally if neither a per-call network nor `defaultNetwork` is set.
+- **Errors are not `Error` objects.** The response interceptor rejects with the raw API body (`src/clients/http-client.ts:43`), so `err.message` is often `undefined`.
+- **Build config:** ES2020, CommonJS, `strict: true`, declarations and source maps, output `dist/`, tests excluded (`tsconfig.json`). Published files are `dist/`, `README.md`, `LICENSE` (`package.json:7-11`).
 
-### HTTP Client Architecture
-- Modified from original Soroswap implementation to support DeFindex authentication
-- Constructor signature changed to accept baseURL, timeout parameters separately
-- Uses axios with custom BigInt serialization support
-- Centralized error handling with API error passthrough
+## Vault Management Roles
 
-### Vault Operations
-- All transaction-building methods return unsigned XDR for external signing
-- Network parameter required for most operations (MAINNET/TESTNET)
-- Comprehensive type safety for vault configurations and responses
-- Support for both regular operations and administrative management functions
+Four roles, `VaultRoles` enum (`src/types/vault.types.ts:275-280`), whose kebab-case values are used as URL path segments:
 
-### Error Handling
-- All API operations can throw errors
-- HTTP errors are passed through from API responses
-- Network timeouts configurable per SDK instance
-- Integration tests may fail due to network issues
+- **Manager** (`manager`) - configure the vault, assign roles, pause/unpause strategies, manage fees, upgrade the WASM
+- **Emergency Manager** (`emergency-manager`) - emergency rescue of assets from a strategy
+- **Rebalance Manager** (`rebalance-manager`) - rebalance (invest, unwind, swap)
+- **Fee Receiver** (`fee-receiver`) - receives distributed fees
 
-### Network Support
-- Supports both Stellar MAINNET and TESTNET networks
-- Network specified per operation call
-- Network-specific contract addresses handled by API
+Roles are set at creation via `VaultRolesConfig`, which uses camelCase keys instead (`src/types/vault.types.ts:120-129`). Regular users deposit, withdraw and read vault data with no role.
 
 ## Development Patterns
 
-### Adding New API Methods
-1. Define TypeScript interfaces in appropriate `src/types/` file
-2. Add method to `DefindexSDK` class with proper grouping (use comment sections)
-3. Use `this.httpClient` for HTTP calls
-4. Follow existing patterns for network parameter handling
-5. Add unit tests with mocked responses
-6. Consider adding integration test if appropriate
+Adding an API method: define its types in the right `src/types/*.types.ts`, export them from `src/types/index.ts`, add the method to `DefindexSDK` under the matching comment banner, call `this.getNetwork(network)` first, then `this.httpClient.get/post`. Add a unit test with a mocked `HttpClient`. Keep `unknown` over `any` outside `src/clients/http-client.ts`.
 
-### Type Safety
-- All API requests/responses should have corresponding TypeScript interfaces
-- Export all types from `src/types/index.ts`
-- Use proper union types for different response formats
-- Maintain consistency with API documentation
+## Module Documentation Convention (MANDATORY)
 
-### Error Boundaries
-- HTTP errors are handled by HttpClient and passed through as API responses
-- Authentication errors should be handled gracefully
-- Network timeouts should be configurable and well-documented
+Every module has a living doc at `docs/modules/<module>.md` (flat file, one per module). `docs/modules/README.md` is the index that routes a module's source path to its doc. These are the fast on-ramp for anyone - human or agent - touching a module.
 
-### Vault Management Roles
-The SDK supports four operational roles defined in `VaultRoles` enum:
-- **Manager**: Full vault control - can configure vault, assign roles, pause/unpause strategies, manage fees, and upgrade contracts
-- **Emergency Manager**: Can execute emergency rescues to withdraw assets from strategies
-- **Rebalance Manager**: Can rebalance vault strategies (invest, unwind, swap operations)
-- **Fee Receiver**: Receives distributed vault fees
+**Progressive disclosure - do NOT load all docs at once.** When you're about to touch a module, open `docs/modules/README.md`, find the ONE doc matching the code you're changing, and read only that. Never pull the whole `docs/modules/` folder into context.
 
-Regular users can deposit, withdraw, and view vault information without special roles.
+**The workflow rule:**
+1. **Before modifying a module, read its `docs/modules/<module>.md` first.** It holds the file map, key methods with `file:line`, dependencies, and gotchas.
+2. **After modifying a module, update its doc in the same change.** New/removed endpoints, changed behavior, new gotchas, dependency changes - all go into the doc before the work is done. Bump the "Last verified" date.
+3. Doc claims must be verified against source and cite `file:line`. Never document something you haven't confirmed exists.
+4. **Adding a new module?** Create its `docs/modules/<module>.md` and add a row to `docs/modules/README.md` in the same change.
 
-## Current Project Status
+Docs follow a shared template: Purpose, Structure, Endpoints/Public surface, Key methods (`file:line`), Dependencies, Gotchas & invariants, Testing.
 
-The DeFindex SDK is fully operational with complete API functionality:
-
-- SDK initialization, configuration, and API key authentication
-- Factory operations (vault creation with/without initial deposit)
-- Complete vault operations (deposit, withdraw, balance, APY, report)
-- Vault management (rebalance, pause/unpause strategies, emergency rescue)
-- Role management (get/set manager, emergency manager, rebalance manager, fee receiver)
-- Fee management (lock, release, distribute fees)
-- Contract upgrades (WASM upgrades)
-- Transaction submission (direct and via LaunchTube)
-- Full TypeScript type safety
-- Unit and integration test coverage
-
-### Example Usage
-```bash
-cp .env.example .env
-# Edit .env with your API key: DEFINDEX_API_KEY=sk_your_api_key_here
-pnpm run example
-```
+> Note: `docs/modules/` is tracked. `.gitignore:45` ignores only `docs/superpowers/`; do not re-add a blanket `docs/` rule, it would make these docs invisible to every other clone.
