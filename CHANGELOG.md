@@ -1,5 +1,19 @@
 # DeFindex SDK Changelog
 
+## Unreleased — CLI
+
+**Added:**
+
+- `defindex` command (package `bin`): `vaults`, `vault <addr>`, `position`, `deposit`, `withdraw`, `sign`
+- `-f json` / `--output json` on every command; errors as `{"error": "..."}` with exit code 1 (runtime) or 2 (usage); `apyPct`, and `null` rather than 0 for missing values
+- `deposit` / `withdraw --dry-run` builds and simulates and prints the unsigned XDR; `sign --xdr <xdr|-> [--submit]` signs it later
+- Signer from environment variables only (`STELLAR_SECRET_KEY`), with a `STELLAR_SIGNER` registry for remote signers
+- `DefindexSDK.discoverVaults()` for `GET /vault/discover`, with `DiscoverVaultsResponse` / `DiscoveredVault`
+
+**Changed:**
+
+- New runtime dependency `@stellar/stellar-sdk` (used by the CLI only); `engines.node` is now `>=22.0.0`, which that dependency requires
+
 ## 0.3.0 — Type System Cleanup & DX Improvements
 
 Standardized naming conventions, removed `any` types, and unified response shapes for a cleaner developer experience.

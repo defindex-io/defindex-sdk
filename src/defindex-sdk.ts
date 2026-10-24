@@ -5,6 +5,7 @@ import {
   CreateVaultAutoInvestParams,
   CreateVaultAutoInvestResponse,
   DepositParams,
+  DiscoverVaultsResponse,
   DistributeFeesParams,
   FactoryAddressResponse,
   LockFeesParams,
@@ -271,6 +272,21 @@ export class DefindexSDK {
   //=======================================================================
   // Vault Operations
   //=======================================================================
+
+  /**
+   * List the main DeFindex vaults on a network, with APY and managed funds
+   * @param network - Stellar network (optional, uses default if not specified)
+   * @returns Vault addresses with 30-day APY and total managed funds per asset; either is null when its read failed
+   * @example
+   * ```typescript
+   * const { vaults } = await sdk.discoverVaults(SupportedNetworks.MAINNET);
+   * vaults.forEach(v => console.log(v.address, v.apy));
+   * ```
+   */
+  public async discoverVaults(network?: SupportedNetworks): Promise<DiscoverVaultsResponse> {
+    const resolvedNetwork = this.getNetwork(network);
+    return this.httpClient.get<DiscoverVaultsResponse>(`/vault/discover?network=${resolvedNetwork}`);
+  }
 
   /**
    * Get comprehensive vault information

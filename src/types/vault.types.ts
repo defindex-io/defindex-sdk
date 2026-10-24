@@ -204,6 +204,19 @@ export interface VaultApyResponse {
   apy: number;
 }
 
+export interface DiscoveredVault {
+  address: string;
+  /** 30-day APY (%), DeFiLlama method; null when the calculation failed */
+  apy: number | null;
+  /** Total managed funds per asset; null when the simulation for this vault failed */
+  totalManagedFunds: { asset: string; total_amount: string }[] | null;
+}
+
+export interface DiscoverVaultsResponse {
+  totalVaults: number;
+  vaults: DiscoveredVault[];
+}
+
 /* Comprehensive Vault Methods Enum - Based on Contract Analysis */
 export enum VaultMethods {
   // Core Vault Operations (VaultTrait)

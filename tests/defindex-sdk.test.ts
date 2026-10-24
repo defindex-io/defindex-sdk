@@ -290,6 +290,19 @@ describe('DefindexSDK - Unit Tests', () => {
       expect(mockHttpClient.get).toHaveBeenCalledWith(`/vault/${vaultAddress}?network=testnet`);
     });
 
+    it('should discover vaults', async () => {
+      const mockResponse = {
+        totalVaults: 1,
+        vaults: [{ address: vaultAddress, apy: 5.93, totalManagedFunds: [{ asset: 'CASSET', total_amount: '100' }] }],
+      };
+      mockHttpClient.get.mockResolvedValue(mockResponse);
+
+      const result = await sdk.discoverVaults(SupportedNetworks.MAINNET);
+
+      expect(result).toEqual(mockResponse);
+      expect(mockHttpClient.get).toHaveBeenCalledWith('/vault/discover?network=mainnet');
+    });
+
     it('should handle vault not found error', async () => {
       const error = new Error('Vault not found');
       mockHttpClient.get.mockRejectedValue(error);

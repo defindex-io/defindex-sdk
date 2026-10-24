@@ -17,6 +17,7 @@ Official TypeScript SDK for [DeFindex](https://defindex.io) - A decentralized va
 - **⚡ Lightweight**: Simple authentication and comprehensive error handling
 - **🧪 Well Tested**: Comprehensive unit and integration test coverage
 - **📚 Complete Examples**: Functional TypeScript examples and comprehensive documentation
+- **🖥️ CLI**: a `defindex` command for scripts and AI agents, with JSON output
 
 ## 🚀 Installation
 
@@ -86,6 +87,50 @@ The example demonstrates:
 - Vault creation, deposits, and withdrawals
 - Administrative vault management
 - Error handling and best practices
+
+## 🖥️ Command-line interface
+
+The package also installs a `defindex` command. It is non-interactive and every command takes `-f json`, so scripts and AI agents can call it through a shell. Requires Node 22 or later.
+
+```bash
+npm install -g @defindex/sdk
+
+defindex vaults                     # no API key needed
+export DEFINDEX_API_KEY="sk_..."
+defindex vault CBNKCU3HGFKHFOF7JTGXQCNKE3G3DXS5RDBQUKQMIIECYKXPIOUGB2S3 -f json
+```
+
+| Command | What it does |
+|---|---|
+| `defindex vaults` | Main vaults with 30-day APY (`apyPct`) and managed funds per asset |
+| `defindex vault <vault>` | Name, fees, roles, assets, strategies and how much is idle or invested |
+| `defindex position <vault> [<account>]` | Shares held and their value per asset (defaults to the signer's address) |
+| `defindex deposit <vault> --amount <n[,n]> [--dry-run]` | Build, sign and submit a deposit. `--no-invest`, `--slippage-bps` |
+| `defindex withdraw <vault> (--amount \| --shares \| --all) [--dry-run]` | Withdraw by underlying amounts, by shares, or everything |
+| `defindex sign --xdr <xdr\|-> [--submit]` | Sign an XDR with the configured signer; `--submit` sends it through the API |
+
+Run `defindex --help` or `defindex <command> --help` for every flag.
+
+**Amounts**: `--amount` takes human units and the CLI reads each asset's decimals on chain; `--raw-amount` takes the smallest unit as is. The two are mutually exclusive. A vault with several assets takes one comma-separated value per asset, in the order `defindex vault` lists them. In JSON output every amount comes twice, as a human string (`amount`) and as a raw integer string (`amountRaw`).
+
+**`--dry-run`** on `deposit` and `withdraw` stops after the API builds the transaction, simulates it on Stellar RPC, and prints the unsigned `xdr`. Nothing is signed or sent. Sign it later, on another machine if you like:
+
+```bash
+defindex deposit <vault> --amount 100 --dry-run --address G... -f json > deposit.json
+jq -r .xdr deposit.json | defindex sign --xdr - --submit -f json
+```
+
+**Configuration** comes from environment variables only; no flag takes a key:
+
+| Variable | Use |
+|---|---|
+| `DEFINDEX_API_KEY` | API key, for every command except `vaults` |
+| `STELLAR_SECRET_KEY` | Secret key (`S...`) that signs `deposit`, `withdraw` and `sign` |
+| `STELLAR_SIGNER` | Signer backend, default `secret-key` (the only one today) |
+| `DEFINDEX_API_URL` | API base URL, default `https://api.defindex.io` |
+| `STELLAR_RPC_URL` | Stellar RPC for decimals lookups and dry-run simulation, for the network you pass |
+
+**Output and errors**: the default format is a table. With `-f json` (or `--output json`) the result is one JSON document on stdout, and a failure prints `{"error": "..."}` on stdout too, with exit code `1` (API, network, signing) or `2` (bad arguments). Missing values are `null`, never `0`. `--network testnet` switches every command to testnet; the default is mainnet.
 
 ## 🔧 Configuration
 

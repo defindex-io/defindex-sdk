@@ -2,7 +2,7 @@
 
 > **Living document.** Read this before modifying the module. Update it in the same change whenever the module's behavior, endpoints, files, or dependencies change.
 
-**Source:** `src/clients/http-client.ts` · **Last verified:** 2026-09-04
+**Source:** `src/clients/http-client.ts` · **Last verified:** 2026-10-24
 
 ## Purpose
 
@@ -37,7 +37,7 @@
 
 ## Dependencies
 
-- `axios` - the only runtime dependency of the whole package (`package.json:67`).
+- `axios` - the only runtime dependency of the library (`package.json:72`); `@stellar/stellar-sdk` (`:71`) is used by the CLI alone.
 - Consumed by `DefindexSDK` (`src/defindex-sdk.ts:1`) and re-exported publicly (`src/index.ts:8`).
 - No env vars, no direct contract or database access. Base URL and API key are injected by the caller.
 
@@ -51,7 +51,7 @@
 
 ## Testing
 
-- `tests/http-client.test.ts` (227 lines), run with `pnpm test` (`package.json:18`).
+- `tests/http-client.test.ts` (227 lines), run with `pnpm test` (`package.json:21`).
 - **Critical gap:** axios is mocked globally in `tests/setup.ts:10-25`, so `axios.create` never runs the real config. The "BigInt serialization" test only asserts `post` was called with the raw object (`tests/http-client.test.ts:205-208`) - `transformRequest` is never executed. The "Error transformation" tests (`tests/http-client.test.ts:212-226`) likewise never exercise the response interceptor, since `interceptors.response.use` is a bare `jest.fn()`.
 - What is genuinely covered: constructor header shape (`tests/http-client.test.ts:41-66`) and `buildUrlWithQuery` (`tests/http-client.test.ts:138-188`), which is pure and needs no HTTP.
 - If you change the interceptor or the transform, add a test that does not rely on the global axios mock.

@@ -7,3 +7,4 @@ Living docs - one per module. **Read the relevant doc before modifying a module;
 | [sdk-client.md](sdk-client.md) | `src/defindex-sdk.ts`, `src/index.ts` | `DefindexSDK` facade: one method per DeFindex API route, network resolution, package exports. |
 | [http-client.md](http-client.md) | `src/clients/http-client.ts` | Axios wrapper: Bearer auth header, BigInt-safe request serialization, error passthrough. |
 | [types.md](types.md) | `src/types/` | All exported TypeScript request/response interfaces and enums for the DeFindex API. |
+| [cli.md](cli.md) | `src/cli/` | The `defindex` command: vaults, vault, position, deposit, withdraw, sign; JSON output and env-only signing. |
