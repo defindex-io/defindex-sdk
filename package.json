@@ -4,6 +4,9 @@
   "description": "Official TypeScript SDK for DeFindex API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "defindex": "dist/cli/index.js"
+  },
   "files": [
     "dist/**/*",
     "README.md",
@@ -36,7 +39,8 @@
     "yield",
     "yield farming",
     "sdk",
-    "typescript"
+    "typescript",
+    "cli"
   ],
   "author": "Paltalabs Team",
   "license": "MIT",
@@ -64,9 +68,10 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@stellar/stellar-sdk": "16.3.1",
     "axios": "^1.10.0"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.0.0"
   }
 }
