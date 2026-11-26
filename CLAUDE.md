@@ -37,14 +37,14 @@ Three modules. **Read the module doc before editing its source** - see `docs/mod
 | HTTP client | `src/clients/http-client.ts` | `docs/modules/http-client.md` |
 | Types | `src/types/` | `docs/modules/types.md` |
 
-Supporting: `tests/` (unit, mocked), `tests/integration/` (live API), `examples/basic-example.ts`, `EXAMPLES.md`, `LLMS-MIGRATION.md` (0.2.1 breaking-change guide), `defindex-sdk-skill.md` (consumer-facing integration skill).
+Supporting: `tests/` (unit, mocked), `tests/integration/` (live API), `examples/basic-example.ts`, `EXAMPLES.md`, `LLMS-MIGRATION.md` (0.2.1 breaking-change guide), `SKILL.md` (consumer-facing integration skill, Agent Skills format).
 
 ## Cross-repo dependencies
 
 | Direction | Target | What | Evidence |
 |---|---|---|---|
 | this repo -> DeFindex API service | `https://api.defindex.io` | Every SDK method is an HTTP call to this service. Default base URL, overridable via config. | `src/defindex-sdk.ts:82`, `.env.example:17`, `tests/integration/README.md:32-33` |
-| other repos -> this repo | npm `@defindex/sdk` v0.3.0 | Published package. Consumers `import DefindexSDK, { SupportedNetworks } from '@defindex/sdk'`. | `package.json:2-3`, `defindex-sdk-skill.md:26,32` |
+| other repos -> this repo | npm `@defindex/sdk` v0.3.0 | Published package. Consumers `import DefindexSDK, { SupportedNetworks } from '@defindex/sdk'`. | `package.json:2-3`, `SKILL.md:26,32` |
 | this repo -> Soroswap | `soroswapRouter?: string` on `CreateVaultParams` | Optional Soroswap router address forwarded to the create-vault endpoint; the vault uses it for rebalance swaps (`SwapExactIn` / `SwapExactOut`). | `src/types/vault.types.ts:159`, `src/types/vault.types.ts:108-115` |
 | this repo -> Stellar/Soroban contracts | factory, vault, strategy contracts | Never hardcoded. Factory address is fetched at runtime; vault addresses are caller-supplied. Testnet fixture addresses appear only in the example and integration tests. | `src/defindex-sdk.ts:155`, `examples/basic-example.ts:41-43`, `tests/integration/defindex-sdk.integration.test.ts:144` |
 | this repo -> GitHub | `defindex-io/defindex-sdk` | Repository / issues home. | `package.json:43-49` |
